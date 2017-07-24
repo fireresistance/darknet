@@ -190,31 +190,29 @@ image **load_alphabet()
     return alphabets;
 }
 
-void draw_detections(image im, int num, float thresh, box *boxes, float **probs, char **names, image **alphabet, int classes)
+void draw_detections(image im, int num, float net_thresh, box *boxes, float **probs, char **names, image **alphabet, int classes)
 {
     int i;
+    int supacnt=0;
 
     for(i = 0; i < num; ++i){
         int class = max_index(probs[i], classes);
         float prob = probs[i][class];
-        if(prob > thresh){
-
+        if(prob > net_thresh){
             int width = im.h * .006;
+            supacnt++;
 
             if(0){
                 width = pow(prob, 1./2.)*10+1;
                 alphabet = 0;
             }
 
-            //printf("%d %s: %.0f%%\n", i, names[class], prob*100);
             printf("%s: %.0f%%\n", names[class], prob*100);
             int offset = class*123457 % classes;
             float red = get_color(2,offset,classes);
             float green = get_color(1,offset,classes);
             float blue = get_color(0,offset,classes);
             float rgb[3];
-
-            //width = prob*20+2;
 
             rgb[0] = red;
             rgb[1] = green;
@@ -226,11 +224,18 @@ void draw_detections(image im, int num, float thresh, box *boxes, float **probs,
             int top   = (b.y-b.h/2.)*im.h;
             int bot   = (b.y+b.h/2.)*im.h;
 
+            /*
+            int left  = (int)(((b.x-b.w/2.)*im.w)*0.85);
+            int right = (int)(((b.x+b.w/2.)*im.w)*1.15);
+            int top   = (int)(((b.y-b.h/2.)*im.h)*0.9);
+            int bot   = (int)(((b.y+b.h/2.)*im.h)*1.1);
+            */
+
             if(left < 0) left = 0;
             if(right > im.w-1) right = im.w-1;
             if(top < 0) top = 0;
             if(bot > im.h-1) bot = im.h-1;
-
+                
             draw_box_width(im, left, top, right, bot, width, red, green, blue);
             if (alphabet) {
                 image label = get_label(alphabet, names[class], (im.h*.03)/10);
@@ -239,6 +244,122 @@ void draw_detections(image im, int num, float thresh, box *boxes, float **probs,
             }
         }
     }
+}
+
+void return_needed_bbox(image im, int num, float thresh, box *boxes, float **probs, 
+    char **names, image **alphabet, int classes, int needed_class,
+    char* datacfg, char* cfgfile, char* weightfile, int top1)
+{
+    // CLASSIFIER NETWORK #################################
+    network net = parse_network_cfg(cfgfile);
+    if(weightfile){
+        load_weights(&net, weightfile);
+    }
+    set_batch_network(&net, 1);
+    srand(2222222);
+    list *options = read_data_cfg(datacfg);
+
+    char *name_list = option_find_str(options, "names", 0);
+    if(!name_list) name_list = option_find_str(options, "labels", "data/labels.list");
+    if(top1 == 0) top1 = option_find_int(options, "top", 1);
+
+    int i = 0;
+    int ii = 0;
+    char **names2 = get_labels(name_list);
+    clock_t time;
+    int *indexes = calloc(top1, sizeof(int));
+    char buff[256];
+    int size = net.w;
+    image ret;
+
+    // CLASSIFIRT NETWORK END #############################
+
+    // SAVENAME
+    int counter=0;
+    char savename[256];
+    char* p_savename = &savename[0]; 
+
+    for(i = 0; i < num; ++i){
+        int class = max_index(probs[i], classes);
+        float prob = probs[i][class];
+        if (class==needed_class)
+        {
+            counter=counter+1;
+            if(prob > thresh){
+
+                int width = im.h * .006;
+
+                if(0){
+                    width = pow(prob, 1./2.)*10+1;
+                    alphabet = 0;
+                }
+                printf("%s: %.0f%%\n", names[class], prob*100);
+                box b = boxes[i];
+
+                //int left  = (int)(((b.x-b.w/2.)*im.w)*0.85);
+                //int right = (int)(((b.x+b.w/2.)*im.w)*1.15);
+                //int top   = (int)(((b.y-b.h/2.)*im.h)*0.9);
+                //int bot   = (int)(((b.y+b.h/2.)*im.h)*1.1);
+
+                int left  = (b.x-b.w/2.)*im.w;
+                int right = (b.x+b.w/2.)*im.w;
+                int top   = (b.y-b.h/2.)*im.h;
+                int bot   = (b.y+b.h/2.)*im.h;
+
+                if(left < 0) left = 0;
+                if(right > im.w-1) right = im.w-1;
+                if(top < 0) top = 0;
+                if(bot > im.h-1) bot = im.h-1;
+                ret = crop_image(im,left,top,right-left,bot-top);
+                image cret=copy_image(ret);
+// CLASSIFIER NETWORK
+                image r = resize_min(cret, size);
+                resize_network(&net, r.w, r.h);
+
+                float *X = r.data;
+                time=clock();
+                float *predictions = network_predict(net, X);
+                if(net.hierarchy) hierarchy_predictions(predictions, net.outputs, net.hierarchy, 1, 1);
+                top_k(predictions, net.outputs, top1, indexes);
+                fprintf(stderr, "Predicted in %f seconds.\n", sec(clock()-time));
+                for(ii = 0; ii < top1; ++ii){
+                    int index = indexes[ii];
+                    printf("%5.2f%%: %s\n", predictions[index]*100, names2[index]);
+                }
+                sprintf(savename,"%s-%d",names2[indexes[0]],counter);
+                save_image(ret, p_savename);
+                if(r.data != ret.data) free_image(r);
+                free_image(ret);
+
+// CLASSIFIER NETWORK
+
+
+                // draw_box_width(im, left, top, right, bot, width, red, green, blue);
+                // if (alphabet) {
+                //     image label = get_label(alphabet, names[class], (im.h*.03)/10);
+                //     draw_label(im, top + width, left, label, rgb);
+                //     free_image(label);
+                // }
+            }
+        }
+    }
+}
+
+int bool_detections(int num, float thresh, float **probs, int classes, int needed_class)
+{
+    int i;
+    for(i = 0; i < num; ++i){
+        int class = max_index(probs[i], classes);
+        float prob = probs[i][class];
+        if (class==needed_class)
+        {
+            if (prob > thresh)
+            {
+                return 1;
+            }
+        }
+    }
+    return 0;
 }
 
 void transpose_image(image im)
@@ -577,20 +698,39 @@ void save_image_jpg(image p, const char *name)
     image copy = copy_image(p);
     if(p.c == 3) rgbgr_image(copy);
     int x,y,k;
-
     char buff[256];
-    sprintf(buff, "%s.jpg", name);
-
+    char* p_buff = &buff[0]; 
+    sprintf(buff, "%s.jpg\0", name);
     IplImage *disp = cvCreateImage(cvSize(p.w,p.h), IPL_DEPTH_8U, p.c);
     int step = disp->widthStep;
-    for(y = 0; y < p.h; ++y){
-        for(x = 0; x < p.w; ++x){
-            for(k= 0; k < p.c; ++k){
+    for(y = 0; y < p.h; y++){
+        for(x = 0; x < p.w; x++){
+            for(k= 0; k < p.c; k++){
                 disp->imageData[y*step + x*p.c + k] = (unsigned char)(get_pixel(copy,x,y,k)*255);
             }
         }
     }
-    cvSaveImage(buff, disp,0);
+    //cvSaveImage(p_buff, disp,0);
+    {
+        CvSize size;
+        {
+            size.width = disp->width, size.height = disp->height;
+        }
+
+        static CvVideoWriter* output_video = NULL;    // cv::VideoWriter output_video;
+        if (output_video == NULL)
+        {
+            printf("\n SRC output_video = %p \n", output_video);
+            const char* output_name = "test_dnn_out.avi";
+            //output_video = cvCreateVideoWriter(output_name, CV_FOURCC('H', '2', '6', '4'), 25, size, 1);
+            output_video = cvCreateVideoWriter(output_name, CV_FOURCC('D', 'I', 'V', 'X'), 25, size, 1);
+            //output_video = cvCreateVideoWriter(output_name, CV_FOURCC('M', 'J', 'P', 'G'), 25, size, 1);
+            printf("\n cvCreateVideoWriter, DST output_video = %p  \n", output_video);
+        }
+
+        cvWriteFrame(output_video, disp);
+        //printf("\n cvWriteFrame \n");
+    }
     cvReleaseImage(&disp);
     free_image(copy);
 }

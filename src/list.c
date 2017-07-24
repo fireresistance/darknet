@@ -70,6 +70,22 @@ void free_list(list *l)
 	free(l);
 }
 
+void free_node2(node *n)
+{
+	node *next;
+	while(n) {
+		next = n->next;
+		free(n);
+		n = next;
+	}
+}
+
+void free_list2(list *l)
+{
+	free_node2(l->front);
+	free(l);
+}
+
 void free_list_contents(list *l)
 {
 	node *n = l->front;

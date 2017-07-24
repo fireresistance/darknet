@@ -500,6 +500,14 @@ char **get_labels(char *filename)
     return labels;
 }
 
+char **get_directory_paths(char *filename)
+{
+    list *plist = get_paths(filename);
+    char **labels = (char **)list_to_array(plist);
+    free_list2(plist);
+    return labels;
+}
+
 void free_data(data d)
 {
     if(!d.shallow){

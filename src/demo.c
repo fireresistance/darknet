@@ -54,11 +54,9 @@ void *detect_in_thread(void *ptr)
 {
     running = 1;
     float nms = .4;
-
     layer l = net.layers[net.n-1];
     float *X = buff_letter[(buff_index+2)%3].data;
     float *prediction = network_predict(net, X);
-
     memcpy(predictions[demo_index], prediction, l.outputs*sizeof(float));
     mean_arrays(predictions, demo_frame, l.outputs, avg);
     l.output = last_avg2;
@@ -66,7 +64,8 @@ void *detect_in_thread(void *ptr)
     if(l.type == DETECTION){
         get_detection_boxes(l, 1, 1, demo_thresh, probs, boxes, 0);
     } else if (l.type == REGION){
-        get_region_boxes(l, buff[0].w, buff[0].h, net.w, net.h, demo_thresh, probs, boxes, 0, 0, demo_hier, 1);
+        get_region_boxes(l, buff[0].w, buff[0].h, net.w, 
+            net.h, demo_thresh, probs, boxes, 0, 0, demo_hier, 1);
     } else {
         error("Last layer must produce detections\n");
     }
@@ -105,12 +104,14 @@ void *display_in_thread(void *ptr)
     } else if (c == 27) {
         demo_done = 1;
         return 0;
-    } else if (c == 82) {
+    } 
+    else if (c == 82) {
         demo_thresh += .02;
     } else if (c == 84) {
         demo_thresh -= .02;
         if(demo_thresh <= .02) demo_thresh = .02;
-    } else if (c == 83) {
+    } 
+    else if (c == 83) {
         demo_hier += .02;
     } else if (c == 81) {
         demo_hier -= .02;
@@ -133,7 +134,9 @@ void *detect_loop(void *ptr)
     }
 }
 
-void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const char *filename, char **names, int classes, int delay, char *prefix, int avg_frames, float hier, int w, int h, int frames, int fullscreen)
+void demo(char *cfgfile, char *weightfile, double thresh, int cam_index, 
+    const char *filename, char **names, int classes, int delay, char *prefix, 
+    int avg_frames, float hier, int w, int h, int frames, int fullscreen)
 {
     demo_delay = delay;
     demo_frame = avg_frames;
@@ -238,4 +241,3 @@ void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const ch
     fprintf(stderr, "Demo needs OpenCV for webcam images.\n");
 }
 #endif
-

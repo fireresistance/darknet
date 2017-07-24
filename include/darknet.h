@@ -4,6 +4,14 @@
 #include <stdio.h>
 #include <string.h>
 #include <pthread.h>
+#include <string.h>
+#include <arpa/inet.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
+#include <errno.h>
+#include <linux/limits.h>
+#include <netinet/in.h>
+#include <sys/un.h>
 
 #define SECRET_NUM -1234
 extern int gpu_index;
@@ -492,6 +500,10 @@ typedef struct{
     float x, y, w, h;
 } box;
 
+typedef struct{
+    int x, y, w, h;
+} intbox;
+
 typedef struct matrix{
     int rows, cols;
     float **vals;
@@ -629,7 +641,15 @@ void rescale_weights(layer l, float scale, float trans);
 void rgbgr_weights(layer l);
 image *get_weights(layer l);
 
-void demo(char *cfgfile, char *weightfile, float thresh, int cam_index, const char *filename, char **names, int classes, int frame_skip, char *prefix, int avg, float hier_thresh, int w, int h, int fps, int fullscreen);
+void demo(char *cfgfile, char *weightfile, double thresh, int cam_index, const char *filename, char **names, 
+    int classes, int frame_skip, char *prefix, int avg, float hier_thresh, int w, int h, int fps, int fullscreen);
+
+void demowithclass(char *cfgfile, char *weightfile, float thresh, int cam_index, const char *filename, 
+    char **names, int classes, int delay, char *prefix, int avg_frames, double hier, int w, int h, 
+    int frames, int fullscreen, char *datacfg_class, char *cfgfile_class, char *weightfile_class, double class_thresh);
+
+
+
 void get_detection_boxes(layer l, int w, int h, float thresh, float **probs, box *boxes, int only_objectness);
 
 char *option_find_str(list *l, char *key, char *def);
@@ -684,7 +704,10 @@ void do_nms(box *boxes, float **probs, int total, int classes, float thresh);
 data load_all_cifar10();
 box_label *read_boxes(char *filename, int *n);
 void draw_detections(image im, int num, float thresh, box *boxes, float **probs, char **names, image **labels, int classes);
-
+//image return_needed_bbox(image im, int num, float thresh, box *boxes, float **probs, char **names, image **alphabet, int classes, int needed_class);
+void return_needed_bbox(image im, int num, float thresh, box *boxes, float **probs, 
+    char **names, image **alphabet, int classes, int needed_class,
+    char* datacfg, char* cfgfile, char* weightfile, int top);
 matrix network_predict_data(network net, data test);
 image **load_alphabet();
 image get_network_image(network net);
@@ -712,17 +735,17 @@ pthread_t load_data_in_thread(load_args args);
 list *get_paths(char *filename);
 void hierarchy_predictions(float *predictions, int n, tree *hier, int only_leaves, int stride);
 void change_leaves(tree *t, char *leaf_list);
-
 int find_int_arg(int argc, char **argv, char *arg, int def);
 float find_float_arg(int argc, char **argv, char *arg, float def);
 int find_arg(int argc, char* argv[], char *arg);
 char *find_char_arg(int argc, char **argv, char *arg, char *def);
 char *basecfg(char *cfgfile);
-void find_replace(char *str, char *orig, char *rep, char *output);
-void free_ptrs(void **ptrs, int n);
-char *fgetl(FILE *fp);
-void strip(char *s);
-float sec(clock_t clocks);
+//void find_replace(char *str, char *orig, char *rep, char *output);
+//void free_ptrs(void **ptrs, int n);
+void free_ptrs1(void **ptrs, int n);
+//char *fgetl(FILE *fp);
+//void strip(char *s);
+//float sec(clock_t clocks);
 void **list_to_array(list *l);
 void top_k(float *a, int n, int k, int *index);
 int *read_map(char *filename);

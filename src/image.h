@@ -44,7 +44,7 @@ void rgb_to_hsv(image im);
 void hsv_to_rgb(image im);
 void yuv_to_rgb(image im);
 void rgb_to_yuv(image im);
-
+image get_label(image **characters, char *string, int size);
 
 image collapse_image_layers(image source, int border);
 image collapse_images_horz(image *ims, int n);
