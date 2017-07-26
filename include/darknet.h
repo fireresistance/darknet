@@ -644,10 +644,11 @@ image *get_weights(layer l);
 void demo(char *cfgfile, char *weightfile, double thresh, int cam_index, const char *filename, char **names, 
     int classes, int frame_skip, char *prefix, int avg, float hier_thresh, int w, int h, int fps, int fullscreen);
 
-void demowithclass(char *cfgfile, char *weightfile, float thresh, int cam_index, const char *filename, 
-    char **names, int classes, int delay, char *prefix, int avg_frames, double hier, int w, int h, 
-    int frames, int fullscreen, char *datacfg_class, char *cfgfile_class, char *weightfile_class, double class_thresh);
-
+void demowithclass(char *cfgfile, char *weightfile, double net_thresh, 
+    int cam_index, const char *filename, char **names, int classes, 
+    int delay, char *prefix, int avg_frames, double hier, int w, int h, 
+    int frames, int fullscreen, char *datacfg_class, char *cfgfile_class, 
+    char *weightfile_class, double class_thresh, int needed_class, char* outname);
 
 
 void get_detection_boxes(layer l, int w, int h, float thresh, float **probs, box *boxes, int only_objectness);
@@ -677,8 +678,11 @@ image mask_to_rgb(image mask);
 int resize_network(network *net, int w, int h);
 void free_matrix(matrix m);
 void test_resize(char *filename);
+
 void save_image(image p, const char *name);
 void show_image(image p, const char *name);
+void save_video_frame(image p, const char *name, char* output_name);
+
 image copy_image(image p);
 void draw_box_width(image a, int x1, int y1, int x2, int y2, int w, float r, float g, float b);
 float get_current_rate(network net);
@@ -703,9 +707,9 @@ float box_iou(box a, box b);
 void do_nms(box *boxes, float **probs, int total, int classes, float thresh);
 data load_all_cifar10();
 box_label *read_boxes(char *filename, int *n);
-void draw_detections(image im, int num, float thresh, box *boxes, float **probs, char **names, image **labels, int classes);
+void draw_detections(image im, int num, double net_thresh, box *boxes, float **probs, char **names, image **labels, int classes);
 //image return_needed_bbox(image im, int num, float thresh, box *boxes, float **probs, char **names, image **alphabet, int classes, int needed_class);
-void return_needed_bbox(image im, int num, float thresh, box *boxes, float **probs, 
+void return_needed_bbox(image im, int num, double thresh, box *boxes, float **probs, 
     char **names, image **alphabet, int classes, int needed_class,
     char* datacfg, char* cfgfile, char* weightfile, int top);
 matrix network_predict_data(network net, data test);

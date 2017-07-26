@@ -71,7 +71,7 @@ void run_detector(int argc, char **argv)
     if(height!=0) printf("Height - %d\n", height);
     if(fps!=0) printf("FPS - %d\n", fps);
     if(gpu_list!=0) printf("Gpus - %s\n", gpu_list);
-    if(outfile!=0) printf("Gpus - %s\n", outfile);
+    if(outfile!=0) printf("Outfile - %s\n", outfile);
     
     if(0==strcmp(argv[2], "test")) 
         test_detector(datacfg, cfg, weights, filename, net_thresh, hier_thresh, outfile, fullscreen);
@@ -97,11 +97,15 @@ void run_detector(int argc, char **argv)
         char **names = get_labels(name_list);
         demowithclass(cfg, weights, net_thresh, cam_index, filename, names, 
             classes, frame_skip, prefix, avg, hier_thresh, width, height, 
-            fps, fullscreen, datacfg2, cfg2, weights2, class_thresh);
+            fps, fullscreen, datacfg2, cfg2, weights2, class_thresh, needed_class, outfile);
     }
     else if(0==strcmp(argv[2], "cleandir")) {
         char **names = get_directory_paths(filename);
         detector_clean_dir_class(datacfg, cfg, weights, names, num_files, net_thresh, hier_thresh, outfile, fullscreen, needed_class);  
+    }
+    else if(0==strcmp(argv[2], "cleandirbbox")) {
+        char **names = get_directory_paths(filename);
+        detector_clean_dir_class_save_bbox(datacfg, cfg, weights, names, num_files, net_thresh, hier_thresh, outfile, fullscreen, needed_class);  
     }
     else if(0==strcmp(argv[2], "testfilelistwithclass")) {
         char **names = get_directory_paths(filename);

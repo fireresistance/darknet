@@ -190,7 +190,7 @@ image **load_alphabet()
     return alphabets;
 }
 
-void draw_detections(image im, int num, float net_thresh, box *boxes, float **probs, char **names, image **alphabet, int classes)
+void draw_detections(image im, int num, double net_thresh, box *boxes, float **probs, char **names, image **alphabet, int classes)
 {
     int i;
     int supacnt=0;
@@ -246,7 +246,7 @@ void draw_detections(image im, int num, float net_thresh, box *boxes, float **pr
     }
 }
 
-void return_needed_bbox(image im, int num, float thresh, box *boxes, float **probs, 
+void return_needed_bbox(image im, int num, double thresh, box *boxes, float **probs, 
     char **names, image **alphabet, int classes, int needed_class,
     char* datacfg, char* cfgfile, char* weightfile, int top1)
 {
@@ -345,7 +345,7 @@ void return_needed_bbox(image im, int num, float thresh, box *boxes, float **pro
     }
 }
 
-int bool_detections(int num, float thresh, float **probs, int classes, int needed_class)
+int bool_detections(int num, double thresh, float **probs, int classes, int needed_class)
 {
     int i;
     for(i = 0; i < num; ++i){
@@ -710,7 +710,8 @@ void save_image_jpg(image p, const char *name)
             }
         }
     }
-    //cvSaveImage(p_buff, disp,0);
+    cvSaveImage(p_buff, disp,0);
+    /*
     {
         CvSize size;
         {
@@ -731,6 +732,44 @@ void save_image_jpg(image p, const char *name)
         cvWriteFrame(output_video, disp);
         //printf("\n cvWriteFrame \n");
     }
+    */
+    cvReleaseImage(&disp);
+    free_image(copy);
+}
+
+void save_video_frame(image p, const char *name, char* output_name)
+{
+    image copy = copy_image(p);
+    if(p.c == 3) rgbgr_image(copy);
+    int x,y,k;
+    char buff[256];
+    char* p_buff = &buff[0]; 
+    sprintf(buff, "%s.jpg\0", name);
+    IplImage *disp = cvCreateImage(cvSize(p.w,p.h), IPL_DEPTH_8U, p.c);
+    int step = disp->widthStep;
+    for(y = 0; y < p.h; y++){
+        for(x = 0; x < p.w; x++){
+            for(k= 0; k < p.c; k++){
+                disp->imageData[y*step + x*p.c + k] = (unsigned char)(get_pixel(copy,x,y,k)*255);
+            }
+        }
+    }
+    CvSize size;
+    {
+        size.width = disp->width, size.height = disp->height;
+    }
+
+    static CvVideoWriter* output_video = NULL;
+    if (output_video == NULL)
+    {
+        printf("Saving video\n");
+        //const char* output_name = "test_dnn_out.avi";
+        //output_video = cvCreateVideoWriter(output_name, CV_FOURCC('H', '2', '6', '4'), 25, size, 1);
+        output_video = cvCreateVideoWriter(output_name, CV_FOURCC('D', 'I', 'V', 'X'), 25, size, 1);
+        //output_video = cvCreateVideoWriter(output_name, CV_FOURCC('M', 'J', 'P', 'G'), 25, size, 1);
+    }
+
+    cvWriteFrame(output_video, disp);
     cvReleaseImage(&disp);
     free_image(copy);
 }

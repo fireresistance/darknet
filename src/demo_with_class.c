@@ -22,7 +22,7 @@ static char *name_list_class;
 static char **names_class;
 static int *indexes_class;
 static int size_class=0;
-static int needed_class=2;
+static int needed_class=0;
 static int top_class = 0;
 //NETWORK2 END ############################
 
@@ -188,12 +188,17 @@ void *display_in_thread_class(void *ptr)
     return 0;
 }
 
-void demowithclass(char *cfgfile, char *weightfile, float thresh, 
+void demowithclass(char *cfgfile, char *weightfile, double net_thresh, 
     int cam_index, const char *filename, char **names, int classes, 
     int delay, char *prefix, int avg_frames, double hier, int w, int h, 
     int frames, int fullscreen, char *datacfg_class, char *cfgfile_class, 
-    char *weightfile_class, double class_thresh)
+    char *weightfile_class, double class_thresh, int needed_class, char* outname)
 {
+	if (outname=0)
+	{
+		outname="test_dnn_out.avi";
+	}
+
     demo_delay = delay;
     demo_frame = avg_frames;
     predictions = calloc(demo_frame, sizeof(float*));
@@ -201,7 +206,7 @@ void demowithclass(char *cfgfile, char *weightfile, float thresh,
     demo_names = names;
     demo_alphabet = alphabet;
     demo_classes = classes;
-    demo_thresh = thresh;
+    demo_thresh = net_thresh;
     demo_class_thresh = class_thresh;
 
     demo_hier = hier;
@@ -305,7 +310,8 @@ void demowithclass(char *cfgfile, char *weightfile, float thresh,
         }else{
             char name[256];
             sprintf(name, "%s_%08d", prefix, count);
-            save_image(buff[(buff_index + 1)%3], name);
+            save_video_frame(buff[(buff_index + 1)%3], name, outname);
+            //save_image(buff[(buff_index + 1)%3], name);
         }
         pthread_join(fetch_thread, 0);
         pthread_join(detect_thread, 0);
@@ -313,11 +319,11 @@ void demowithclass(char *cfgfile, char *weightfile, float thresh,
     }
 }
 #else
-void demowithclass(char *cfgfile, char *weightfile, float thresh, 
+void demowithclass(char *cfgfile, char *weightfile, double net_thresh, 
     int cam_index, const char *filename, char **names, int classes, 
-    int delay, char *prefix, int avg_frames, float hier, int w, int h, 
-    int frames, int fullscreen,
-    char *datacfg_class, char *cfgfile_class, char *weightfile_class)
+    int delay, char *prefix, int avg_frames, double hier, int w, int h, 
+    int frames, int fullscreen, char *datacfg_class, char *cfgfile_class, 
+    char *weightfile_class, double class_thresh, int needed_class, char* outname)
 {
     fprintf(stderr, "Demo needs OpenCV for webcam images.\n");
 }
